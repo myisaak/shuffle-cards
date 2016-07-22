@@ -49,10 +49,9 @@ public class Deck : MonoBehaviour
         var cardIndex = transform.childCount-1;
         var card = transform.GetChild(cardIndex).GetComponent<Card>();
 
-        if(Hand.DropCard(ref card))
-        {
-            cardIndexList.RemoveAt(cardIndex);
-        }
+        Hand.DropCard(ref card);
+    
+        cardIndexList.RemoveAt(cardIndex);
     }
 
     public void ClearDeck()

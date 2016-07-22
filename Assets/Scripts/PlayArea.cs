@@ -1,5 +1,4 @@
 ﻿using UnityEngine;
-using UnityEngine.UI;
 using System.Collections.Generic;
 
 public class PlayArea : MonoBehaviour {
@@ -7,6 +6,8 @@ public class PlayArea : MonoBehaviour {
     public GameObject CardObject;
     public bool isDirty { get { return transform.childCount != _oldChildCount; } }
     private int _oldChildCount = 0;
+    private List<Card> _cards = new List<Card>();
+    private bool ascending = false;
 
     public List<Card> Cards
     {
@@ -31,23 +32,25 @@ public class PlayArea : MonoBehaviour {
             }
         }
     }
-    private List<Card> _cards = new List<Card>();
 
-	public void Sort()
+    public void ToggleSort()
     {
-        if (!isDirty) return;
+        ascending = !ascending;
+        Sort(ascending);
+    }
 
+	public void Sort(bool ascending)
+    {
         Cards.Sort(
             delegate (Card p1, Card p2)
             {
-                return p1.Rank.CompareTo(p2.Rank);
+                return ascending ? p1.Rank.CompareTo(p2.Rank) : p2.Rank.CompareTo(p1.Rank);
             }
         );
 
         for (int i = 0; i < Cards.Count; i++)
         {
             Cards[i].transform.SetSiblingIndex(i);
-            Cards[i].Position = new Vector2(i * 50, 0); 
         }
     }
 }

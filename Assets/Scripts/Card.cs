@@ -12,9 +12,13 @@ public class Card : MonoBehaviour
 
     public FlipState State
     {
+        get
+        {
+            return _state;
+        }
         set
         {
-            FlipCard(value);
+            _state = value;
         }
     }
 
@@ -30,51 +34,12 @@ public class Card : MonoBehaviour
         {
             if (_cardText == null) _cardText = GetComponentInChildren<Text>();
 
-            gameObject.name = value;
-            _cardText.text = value;
+            gameObject.name = value == "0" ? "" : value;
+            _cardText.text = value == "0" ? "" : value;
         }
     }
 
-    public bool Selected
-    {
-        get
-        {
-            return _selected;
-        }
-        set
-        {
-            if (value == _selected) return;
-
-            _selected = value;
-            MoveCard(new Vector3(transform.localPosition.x, (value ? -40 + CARD_SELECTION_HEIGHT : -50), transform.localPosition.z));
-        }
-    }
-
-    public Vector3 Position
-    {
-        get
-        {
-            return transform.localPosition;
-        }
-        set
-        {
-            MoveCard(value);
-        }
-    }
-
-    public bool Active
-    {
-        get { return _active; }
-        set
-        {
-            _active = value;
-            Value = value ? "A" : string.Empty;
-            GetComponent<CanvasRenderer>().SetAlpha(value ? 1 : 0);
-            GetComponent<Image>().raycastTarget = value;
-            GetComponent<Button>().enabled = value;
-            gameObject.name = value ? Value : "Empty";
-        }
-    }
+    public bool Selected { get; set; }
 
     public int Rank
     {
@@ -93,7 +58,7 @@ public class Card : MonoBehaviour
                 case "A":
                     return 9;
                 default:
-                    return int.Parse(Value);
+                    return int.Parse(Value) - 1;
             }
         }
         set
@@ -119,21 +84,30 @@ public class Card : MonoBehaviour
         }
     }
 
+    public bool isDraggable
+    {
+        set
+        {
+            GetComponent<EventTrigger>().enabled = value;
+        }
+    }
+
     private const float FLIP_SPEED = 5f;
-    private const float MOVE_SPEED = 5f;
-    private const float CARD_SELECTION_HEIGHT = 35f;
+    private const float MOVE_SPEED = 10f;
+    private const float CARD_SELECTION_HEIGHT = 20f;
     private const float DRAG_SPEED = 10f;
 
     private Text _cardText;
-    private bool _active = true;
-    private bool _flipping = false;
-    private bool _selected = false;
-    private Vector3 _cachePosition;
     private RectTransform _canvasRect;
+    private Canvas _canvas;
+    private FlipState _state;
 
     private void Awake ()
     {
-        _canvasRect = FindObjectOfType<Canvas>().GetComponent<RectTransform>();
+        _canvas = FindObjectOfType<Canvas>();
+        _canvasRect = _canvas.GetComponent<RectTransform>();
+
+        Selected = false;
     }
 
     public void ToggleSelection()
@@ -144,7 +118,6 @@ public class Card : MonoBehaviour
     public void OnDragEnter()
     {
         StopAllCoroutines();
-        _cachePosition = transform.localPosition;
     }
 
     public void OnDrag(BaseEventData eventData)
@@ -154,14 +127,12 @@ public class Card : MonoBehaviour
 
         Vector3 worldPoint;
         RectTransformUtility.ScreenPointToWorldPointInRectangle(_canvasRect, pointerData.position, Camera.main, out worldPoint);
-
+        transform.SetAsLastSibling();
         transform.position = Vector3.Lerp(transform.position, new Vector3(worldPoint.x, transform.position.y, transform.position.z), Time.deltaTime * DRAG_SPEED);
-        //transform.position += new Vector3(0.3f*pointerData.delta.x, 0, 0);
     }
 
     public void OnDragExit(BaseEventData eventData)
     {
-        // if Mathf.Abs(transform.localPosition.x - _cachePosition.x) > 100f
         var pointerData = eventData as PointerEventData;
         var raycastResults = new List<RaycastResult>();
         FindObjectOfType<GraphicRaycaster>().Raycast(pointerData, raycastResults);
@@ -169,63 +140,23 @@ public class Card : MonoBehaviour
         {
             if (hit.gameObject != gameObject && hit.gameObject.name.Length == 1)
             {
-                MoveCard(hit.gameObject.transform.localPosition);
-                hit.gameObject.GetComponent<Card>().MoveCard(_cachePosition);
-                int targetIndex = hit.gameObject.transform.GetSiblingIndex();
-                hit.gameObject.transform.SetSiblingIndex(transform.GetSiblingIndex());
-                transform.SetSiblingIndex(targetIndex);
+                int targetIndex = hit.gameObject.transform.parent.GetSiblingIndex();
+                transform.parent.SetSiblingIndex(targetIndex + 1);
                 return;
             }
         }
-        
-        MoveCard(_cachePosition);
     }
 
-    private void FlipCard(FlipState state)
+    private void Update()
     {
-        if (_flipping)
+        if (transform.parent != null)
         {
-             StopCoroutine(IFlipCard(FlipState.Hidden));
-             StopCoroutine(IFlipCard(FlipState.Shown));
-             _flipping = false;
+            transform.position = Vector3.Lerp(transform.position, transform.parent.position + (Selected ? Vector3.up * CARD_SELECTION_HEIGHT : Vector3.zero), Time.deltaTime * MOVE_SPEED);
         }
 
-        StartCoroutine(IFlipCard(state));
-    }
+        _cardText.enabled = transform.localEulerAngles.y < 90;
+        GetComponent<Image>().sprite = transform.localEulerAngles.y < 90 ? ForegroundSprite : BackgroundSprite;
 
-    private IEnumerator IFlipCard(FlipState state)
-    {
-        _flipping = true;
-        while (state == FlipState.Hidden ? transform.eulerAngles.y < 180 : transform.eulerAngles.y > 0)
-        {
-            _cardText.enabled = transform.eulerAngles.y < 90;
-            GetComponent<Image>().sprite = transform.eulerAngles.y < 90 ? ForegroundSprite : BackgroundSprite;
-
-            transform.eulerAngles = Vector3.Lerp(transform.eulerAngles, new Vector3(0, state == FlipState.Hidden ? 180 : 0, 0), Time.deltaTime * FLIP_SPEED);
-            yield return true;
-        }
-        _flipping = false;
-    }
-
-    private void MoveCard(Vector3 position)
-    {
-        StopAllCoroutines();
-        
-        StartCoroutine(IMoveCard(position));
-    }
-
-    private IEnumerator IMoveCard(Vector3 position)
-    {
-        while (transform.localPosition != position)
-        {
-            transform.localPosition = Vector3.Lerp(transform.localPosition, position, Time.deltaTime * MOVE_SPEED);
-
-            if (Mathf.Abs(transform.localPosition.x - position.x) < 0.1f && Mathf.Abs(transform.localPosition.y - position.y) < 0.1f)
-            {
-                transform.localPosition = position;
-            }
-
-            yield return true;
-        }
+        transform.localEulerAngles = Vector3.Lerp(transform.localEulerAngles, new Vector3(0, _state == FlipState.Hidden ? 180 : 0, 0), Time.deltaTime * FLIP_SPEED);
     }
 }
