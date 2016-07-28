@@ -1,56 +1,37 @@
 ﻿using UnityEngine;
-using System.Collections.Generic;
+using UnityEngine.UI;
 
-public class PlayArea : MonoBehaviour {
+public class PlayArea : CardArea {
 
-    public GameObject CardObject;
-    public bool isDirty { get { return transform.childCount != _oldChildCount; } }
-    private int _oldChildCount = 0;
-    private List<Card> _cards = new List<Card>();
-    private bool ascending = false;
-
-    public List<Card> Cards
+    public override void RefreshCards(GameObject cardToBeDestroyed = null)
     {
-        get
+        if (transform.childCount > 0)
         {
-            if (isDirty)
+            var cards = Cards;
+
+            Vector3[] oldCardPositions = new Vector3[cards.Count];
+
+            for (int i = 0; i < cards.Count; i++)
             {
-                _cards = new List<Card>();
+                oldCardPositions[i] = cards[i].transform.position;
+            }
 
-                for (int i = 0; i < transform.childCount; i++)
-                {
-                    _cards.Add(transform.GetChild(i).GetComponent<Card>());
-                }
-
-                _oldChildCount = transform.childCount;
-
-                return _cards;
+            if (transform.ChildCountActive() < 7)
+            {
+                GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 50f + transform.childCount * 100f);
             }
             else
             {
-                return _cards;
+                GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 650f);
             }
-        }
-    }
 
-    public void ToggleSort()
-    {
-        ascending = !ascending;
-        Sort(ascending);
-    }
+            GetComponent<HorizontalLayoutGroup>().CalculateLayoutInputHorizontal();
+            GetComponent<HorizontalLayoutGroup>().SetLayoutHorizontal();
 
-	public void Sort(bool ascending)
-    {
-        Cards.Sort(
-            delegate (Card p1, Card p2)
+            for (int i = 0; i < transform.childCount; i++)
             {
-                return ascending ? p1.Rank.CompareTo(p2.Rank) : p2.Rank.CompareTo(p1.Rank);
+                transform.GetChild(i).GetChild(0).position = oldCardPositions[i];
             }
-        );
-
-        for (int i = 0; i < Cards.Count; i++)
-        {
-            Cards[i].transform.SetSiblingIndex(i);
         }
     }
 }
