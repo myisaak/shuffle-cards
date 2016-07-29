@@ -90,9 +90,10 @@ public class PlayerHand : CardArea
 
     public void MoveBesideOther(Card one, Card two)
     {
+        int startIndex = one.transform.parent.GetSiblingIndex();
         int targetIndex = two.transform.parent.GetSiblingIndex();
 
-        one.transform.parent.SetSiblingIndex(targetIndex);
+        one.transform.parent.SetSiblingIndex(targetIndex + (startIndex > targetIndex ? 1 : 0));
 
         RefreshCards();
     }

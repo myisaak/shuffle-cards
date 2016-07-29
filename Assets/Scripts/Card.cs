@@ -127,6 +127,9 @@ public class Card : MonoBehaviour
     private bool once;
     private GameObject dummyCard;
     private GameObject dummyLayout;
+    private int targetindex;
+    private bool _isDragging;
+    private bool _dragSelectedState;
 
     private void Awake ()
     {
@@ -181,10 +184,13 @@ public class Card : MonoBehaviour
         _lastSiblingIndex = transform.parent.GetSiblingIndex();
         _dragTimer = 0;
         once = false;
+        _isDragging = true;
+        _dragSelectedState = Selected;
     }
 
     public void OnDrag(BaseEventData eventData)
     {
+        _isDragging = true;
         var pointerData = eventData as PointerEventData;
         if (pointerData == null) return;
 
@@ -196,13 +202,45 @@ public class Card : MonoBehaviour
 
         if(!once)
         {
-            StartCoroutine(DragClone());
-            StartCoroutine(DragLoop());
+            //StartCoroutine(DragClone());
+            //StartCoroutine(DragLoop());
+            StartCoroutine(DragLoop1());
             once = true;
         }
-
+        
         offset = new Vector3(worldPoint.x, worldPoint.y, 0);
+    }
 
+    private IEnumerator DragLoop1()
+    {
+        while (_isDragging)
+        {
+            float smallestDistance = Mathf.Infinity;
+            targetindex = 0;
+
+            for (int i = 0; i < FindObjectOfType<PlayerHand>().transform.childCount; i++)
+            {
+                float distance = transform.GetDistPointToLine(Vector3.up, FindObjectOfType<PlayerHand>().transform.GetChild(i).position);
+
+                if (distance < smallestDistance)
+                {
+                    smallestDistance = distance;
+                    targetindex = i;
+                }
+
+                FindObjectOfType<PlayerHand>().transform.GetChild(i).GetChild(0).GetComponent<Image>().color = Color.white;
+            }
+
+            if (targetindex != transform.parent.GetSiblingIndex())
+            {
+                FindObjectOfType<PlayerHand>().transform.GetChild(targetindex).GetChild(0).GetComponent<Image>().color = new Color(0.3f, 0.3f, 0.3f);
+            }
+            else
+            {
+                //FindObjectOfType<PlayerHand>().transform.GetChild(targetindex+(transform.parent.GetSiblingIndex() == transform.parent.parent.childCount-1 ? -1 : 1)).GetChild(0).GetComponent<Image>().color = new Color(0.3f, 0.3f, 0.3f);
+            }
+            yield return true;
+        }
     }
 
     private IEnumerator DragLoop()
@@ -263,18 +301,24 @@ public class Card : MonoBehaviour
     {
         if (_dragTimer < DRAG_DELAY) return;
 
+        _isDragging = false;
+
         var pointerData = eventData as PointerEventData;
         var raycastResults = new List<RaycastResult>();
 
         _dragTimer = 0;
         offset = Vector3.zero;
-        Selected = !Selected;
+        Selected = _dragSelectedState;
 
         transform.parent.SetSiblingIndex(_lastSiblingIndex);
         transform.parent.GetComponent<RectTransform>().SetParent(FindObjectOfType<PlayerHand>().transform, true);
         transform.localScale = Vector3.one;
         //FindObjectOfType<PlayerHand>().MoveBesideOther(this, dummyCard.GetComponent<Card>());
-        FindObjectOfType<PlayerHand>().ReplaceOther(this, dummyCard.GetComponent<Card>());
+        for (int i = 0; i < FindObjectOfType<PlayerHand>().transform.childCount; i++)
+        {
+            FindObjectOfType<PlayerHand>().transform.GetChild(i).GetChild(0).GetComponent<Image>().color = Color.white;
+        }
+        FindObjectOfType<PlayerHand>().MoveBesideOther(this, FindObjectOfType<PlayerHand>().transform.GetChild(targetindex).GetChild(0).GetComponent<Card>());
     }
 
     private void Update()
