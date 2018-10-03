@@ -33,11 +33,10 @@ public class PlayerHand : CardArea
     
     private bool _ascending;
 
-    public void PlayCards ()
+    public virtual void PlayCards ()
     {
         if (SelectedCards.Count > 0)
         {
-            Debug.Log(PlayArea.childCount);
             PlayArea.GetComponent<PlayArea>().ClearArea();
 
             StartCoroutine(IPlayCards());
@@ -61,6 +60,11 @@ public class PlayerHand : CardArea
         yield return null;
 
         RefreshCards();
+    }
+
+    public virtual void DrawCard()
+    {
+        Deck.Instance().DrawCard(this);
     }
 
     public void ToggleSort()

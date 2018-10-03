@@ -1,11 +1,11 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System;
 
 public class Deck : CardArea
 {
     public GameObject CardObject;
-    public RectTransform Hand;
 
     public List<Sprite> Hearts;
     public List<Sprite> Diamonds;
@@ -16,6 +16,7 @@ public class Deck : CardArea
 
     private List<int> cardIndexList = new List<int>(MAX_CARDS_DECK);
     private bool isReady;
+    private static Deck _instance;
 
     private void Awake ()
     {
@@ -61,15 +62,22 @@ public class Deck : CardArea
         isReady = true;
     }
 
-    public void DrawCard ()
+    public void DrawCard (PlayerHand hand)
     {
         if (transform.childCount == 0 || !isReady) return;
 
         var cardIndex = transform.childCount-1;
         var card = transform.GetChild(cardIndex).GetChild(0).GetComponent<Card>();
-        card.MoveToArea(Hand, true);
+        card.MoveToArea(hand.GetComponent<RectTransform>(), true);
         cardIndexList.RemoveAt(cardIndex);
         //Hand.GetComponent<CardArea>().RefreshCards();
+    }
+
+    public static Deck Instance()
+    {
+        if (_instance == null)
+            _instance = FindObjectOfType<Deck>();
+        return _instance;
     }
 }
 

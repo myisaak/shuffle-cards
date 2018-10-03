@@ -16,6 +16,7 @@ public class Card : MonoBehaviour
         {
             return _foregroundSprite;
         }
+
         set
         {
             _foregroundSprite = value;
